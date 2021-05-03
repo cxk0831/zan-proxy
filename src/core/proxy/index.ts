@@ -18,19 +18,22 @@ import HttpsServer from './servers/https';
 import { ConnectHandler, RequestHandler, UpgradeHandler } from '../proxy/handler';
 import { IProxyMiddleware } from '../types/proxy';
 
-const COMMON_MIDDLEWARE_CLASSES: IProxyMiddleware[] = [
-  Container.get(IgnoreMiddleware),
-  Container.get(RecordResponseMiddleware),
-  Container.get(RuleMiddleware),
-  Container.get(PluginMiddleware),
-  Container.get(HostMiddleware),
-  Container.get(RecordRequestMiddleware),
-];
-
-const forwardMiddleware = Container.get(ForwarderMiddleware);
-
 @Service()
 export class Proxy {
+  forwardMiddleware: ForwarderMiddleware;
+  commonMiddlewareClasses: IProxyMiddleware[];
+  constructor() {
+    this.forwardMiddleware = Container.get(ForwarderMiddleware);
+    this.commonMiddlewareClasses = [
+      Container.get(IgnoreMiddleware),
+      Container.get(RecordResponseMiddleware),
+      Container.get(RuleMiddleware),
+      Container.get(PluginMiddleware),
+      Container.get(HostMiddleware),
+      Container.get(RecordRequestMiddleware),
+    ];
+  }
+
   private middleware: IProxyMiddlewareFn[] = [];
 
   private handlers: {
@@ -68,12 +71,12 @@ export class Proxy {
     this.httpsProxyServer.setHttpHandler(this.handlers.request);
     this.httpsProxyServer.setUpgradeHandler(this.handlers.upgrade);
 
-    COMMON_MIDDLEWARE_CLASSES.forEach(middleware => this.useMiddleware(middleware));
+    this.commonMiddlewareClasses.forEach(middleware => this.useMiddleware(middleware));
   }
 
   public listen(port: number = 8001) {
     this.handlers.request.setMiddleware(
-      compose([...this.middleware, forwardMiddleware.middleware.bind(forwardMiddleware)]),
+      compose([...this.middleware, this.forwardMiddleware.middleware.bind(this.forwardMiddleware)]),
     );
     this.handlers.upgrade.setMiddleware(compose(this.middleware));
     this.httpProxyServer.listen(port);

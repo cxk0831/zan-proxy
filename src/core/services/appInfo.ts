@@ -35,7 +35,8 @@ export class AppInfoService extends EventEmitter {
    * 存放本地数据的目录
    */
   public get proxyDataDir(): string {
-    return path.join(USER_HOME, process.env.CONFIG_DIR_NAME || '.front-end-proxy');
+    const defaultPath = path.resolve(__dirname, '../../../../cache');
+    return path.join(process.env.CONFIG_DIR_NAME || defaultPath);
   }
 
   /**

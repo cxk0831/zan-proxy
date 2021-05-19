@@ -2,6 +2,8 @@ const path = require('path');
 const MonacoEditorWebpackPlugin = require('monaco-editor-webpack-plugin');
 const rootResolve = (...ps) => path.resolve(__dirname, '../', ...ps);
 
+const EntryName = 'manager.html';
+
 module.exports = {
   lintOnSave: false,
   outputDir: rootResolve('site'),
@@ -10,7 +12,7 @@ module.exports = {
     manager: {
       entry: 'src/pages/manager/index.ts',
       template: 'index.html',
-      filename: 'manager.html',
+      filename: EntryName,
       title: 'ZanProxy Admin Manager',
       chunks: ['chunk-vendors', 'chunk-common', 'manager'],
     },
@@ -52,9 +54,10 @@ module.exports = {
   },
   devServer: {
     host: '127.0.0.1',
-    port: 8081,
+    port: 8085,
     inline: true,
-    public: '127.0.0.1:8081',
+    public: '127.0.0.1:8085',
+    index: EntryName,
     writeToDisk: filepath => {
       return !filepath.includes('.hot-update.');
     },

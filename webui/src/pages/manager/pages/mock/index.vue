@@ -6,7 +6,11 @@
     </div>
     <el-table border :data="dataList">
       <el-table-column prop="name" label="名字" align="center" :width="400" :sortable="true"></el-table-column>
-      <el-table-column prop="contentType" label="类型" :width="400" align="center"></el-table-column>
+      <el-table-column prop="contentType" label="类型" :width="400" align="center">
+        <template scope="scope">
+          <p>{{ scope.row.contentType.key }}</p>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" :context="_self">
         <template v-slot="scope">
           <el-button type="info" icon="el-icon-edit" size="mini" @click="editMockData(scope.row)"></el-button>
@@ -33,6 +37,9 @@
             <el-option v-for="item in mockLanguageTypes" :key="item" :label="item" :value="item"></el-option>
           </el-select>
         </el-form-item>
+        <el-form-item label="数据类型">
+          <el-tag type="info" color="rgb(1,1,1,0)">{{editorDataType}}</el-tag>
+        </el-form-item>
         <el-form-item :show-message="false" label-width="0" class="content-editor-container" prop="content">
           <div id="content-editor" class="content-editor"></div>
         </el-form-item>
@@ -48,14 +55,12 @@
 <script lang="ts">
 import Vue from 'vue';
 import { Component, Prop, Watch } from 'vue-property-decorator';
-import forEach from 'lodash/forEach';
 import findKey from 'lodash/findKey';
 import uuidV4 from 'uuid/v4';
 import { IMockRecord } from '@core/types/mock';
 import { mockModule } from '../../store';
 import * as dataApi from '../../api/data';
 import * as Monaco from 'monaco-editor';
-import noop from 'lodash/noop';
 import { ElForm } from 'element-ui/types/form';
 
 let editor: Monaco.editor.IStandaloneCodeEditor;
@@ -64,16 +69,41 @@ interface IMockDataForm {
   isNew: boolean;
   id: string;
   name: string;
-  contentType: string;
+  contentType: {
+    key: string;
+    type: string;
+    languageType: string;
+  };
   content: string;
 }
 
-enum languageContentTypeMap {
-  text = 'text/plain',
-  html = 'text/html',
-  json = 'application/json',
-  javascript = 'application/javascript',
-}
+const languageContentTypeMap = {
+  text: {
+    type: 'text/plain',
+    key: 'text',
+    languageType: 'text',
+  },
+  html: {
+    type: 'text/html',
+    key: 'html',
+    languageType: 'html',
+  },
+  json: {
+    type: 'application/json',
+    key: 'json',
+    languageType: 'json',
+  },
+  javascript: {
+    type: 'application/javascript',
+    key: 'javascript',
+    languageType: 'javascript',
+  },
+  mock: {
+    type: 'application/json',
+    key: 'mock',
+    languageType: 'json',
+  },
+};
 
 type IAvaliableLanguage = keyof typeof languageContentTypeMap;
 
@@ -84,13 +114,19 @@ export default class Mock extends Vue {
 
   dialogVisible = false;
 
-  mockLanguageTypes: IAvaliableLanguage[] = ['text', 'html', 'json', 'javascript'];
+  editorDataType = '你好世界';
+
+  mockLanguageTypes: IAvaliableLanguage[] = ['text', 'html', 'json', 'javascript', 'mock'];
 
   mockDataForm: IMockDataForm = {
     isNew: true,
     id: '',
     name: '',
-    contentType: '',
+    contentType: {
+      key: '',
+      type: '',
+      languageType: '',
+    },
     content: '',
   };
 
@@ -124,17 +160,18 @@ export default class Mock extends Vue {
   };
 
   get language() {
-    const language = findKey(languageContentTypeMap, v => v === this.mockDataForm.contentType) || 'text';
+    const language = findKey(languageContentTypeMap, v => v.key === this.mockDataForm.contentType.key) || 'text';
     return language as IAvaliableLanguage;
   }
 
   set language(language: keyof typeof languageContentTypeMap) {
-    this.mockDataForm.contentType = languageContentTypeMap[language];
+    const languageObj = languageContentTypeMap[language];
+    this.mockDataForm.contentType = languageObj;
     const model = editor.getModel();
     if (!model) {
       return;
     }
-    Monaco.editor.setModelLanguage(model, language);
+    Monaco.editor.setModelLanguage(model, languageObj.languageType);
   }
 
   /**
@@ -202,12 +239,18 @@ export default class Mock extends Vue {
         const editorEl = document.getElementById('content-editor') as HTMLElement;
         editor = Monaco.editor.create(editorEl, {
           value: this.mockDataForm.content,
-          language: this.mockDataForm.contentType,
+          language: this.mockDataForm.contentType.languageType,
           theme: 'vs-dark',
           scrollBeyondLastLine: false,
           minimap: {
             enabled: false,
           },
+        });
+        editor.onKeyDown((value) => {
+          console.log('信息输出', value);
+        });
+        editor.onDidBlurEditorText((value) => {
+          console.log('信息输出2', value);
         });
       });
     } else {
@@ -216,10 +259,17 @@ export default class Mock extends Vue {
       if (!model) {
         return;
       }
-      Monaco.editor.setModelLanguage(model, this.language);
+      const languageObj = languageContentTypeMap[this.language];
+      Monaco.editor.setModelLanguage(model, languageObj.languageType);
       this.$nextTick(() => {
         editor.render();
         editor.focus();
+        editor.onKeyDown((value) => {
+          console.log('信息输出', value);
+        });
+        editor.onDidBlurEditorText((value) => {
+          console.log('信息输出2', value);
+        });
       });
     }
   }

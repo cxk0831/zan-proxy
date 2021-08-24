@@ -32,13 +32,20 @@ export class MockDataService extends EventEmitter {
   }
 
   /**
-   * 获取数据文件的 content type
+   * 获取数据文件的 content type string
    */
-  public async getDataFileContentType(id: string) {
+  public getDataFileContentTypeString(id: string) {
     const mockRecord = find(this.mockList, entry => {
       return entry.id === id;
     });
-    return mockRecord ? mockRecord.contentType + ';charset=utf-8' : '';
+    return mockRecord ? mockRecord.contentType.type + ';charset=utf-8' : '';
+  }
+
+  public getDataFileContentType(id: string): IMockRecord['contentType'] | undefined {
+    const mockRecord = find(this.mockList, entry => {
+      return entry.id === id;
+    });
+    return mockRecord ? mockRecord.contentType : undefined;
   }
 
   /**

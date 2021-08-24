@@ -4,6 +4,8 @@ import mime from 'mime-types';
 import { Inject, Service } from 'typedi';
 import URL from 'url';
 
+import Mock from 'mockjs';
+
 import { IRule, IRuleActionData } from '@core/types/rule';
 
 import { MockDataService, ProfileService, RuleService } from '../../services';
@@ -24,9 +26,20 @@ export class RuleMiddleware implements IProxyMiddleware {
   private async processMockData(data: IRuleActionData, ctx: IProxyContext) {
     const { dataId } = data;
     const content = await this.mockDataService.getDataContent(dataId);
+    const contentTypeString = await this.mockDataService.getDataFileContentTypeString(dataId);
     const contentType = await this.mockDataService.getDataFileContentType(dataId);
-    ctx.res.body = content;
-    ctx.res.setHeader('Content-Type', contentType);
+    if (contentType && contentType.key === 'mock') {
+      let contentObj;
+      try {
+        contentObj = JSON.parse(content);
+      } catch (e) {
+        contentObj = 'Mock 格式错误';
+      }
+      ctx.res.body = Mock.mock(contentObj);
+    } else {
+      ctx.res.body = content;
+    }
+    ctx.res.setHeader('Content-Type', contentTypeString);
   }
 
   /**
@@ -132,5 +145,7 @@ export class RuleMiddleware implements IProxyMiddleware {
     Object.keys(resHeaders).forEach(headerKey => {
       ctx.res.setHeader(headerKey, resHeaders[headerKey]);
     });
+    // TODO 设置响应头
+    // ctx.res.statusCode = 400;
   }
 }

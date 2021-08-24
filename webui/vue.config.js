@@ -56,7 +56,12 @@ module.exports = {
     host: '127.0.0.1',
     port: 8085,
     inline: true,
-    public: '127.0.0.1:8085',
+    // public: 'http://127.0.0.1:40001',
+    proxy: {
+      '/': {
+        target: 'http://127.0.0.1:40001'
+      },
+    },
     index: EntryName,
     writeToDisk: filepath => {
       return !filepath.includes('.hot-update.');
